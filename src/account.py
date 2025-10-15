@@ -8,13 +8,17 @@ class Account:
             self.pesel = pesel
         else:
             self.pesel = "Invalid"
-        self.promo_code = promo_code
+        if promo_code is not None:
+            self.check_promo(promo_code)
     
     def is_pesel_valid(self, pesel):
         if len(pesel) == 11:
             return True
         return False
 
-    def check_promo(self):
-        if self.promo_code[0:5] == "PROM_" and int(self.pesel[0:2]) > 60:
+    def check_promo(self, promo_code):
+        if promo_code[0:5] == "PROM_" and (int(self.pesel[0:2]) > 60 or int(self.pesel[0:2]) < 24):
             self.balance += 50
+            self.promo_code = promo_code
+        else:
+            self.promo_code = "Invalid"

@@ -18,6 +18,10 @@ class TestAccount:
         account = Account("Jane", "Smith", "14325")
         assert account.pesel == "Invalid"
     
-    def test_promo(self):
+    def test_good_promo(self):
         account = Account("Jane", "Smith", "11111111111", "PROM_XYZ")
         assert account.promo_code == "PROM_XYZ"
+    
+    def test_bad_promo(self):
+        account = Account("Jane", "Smith", "11111111111", "jakis_kodzik")
+        assert account.promo_code == "Invalid"
