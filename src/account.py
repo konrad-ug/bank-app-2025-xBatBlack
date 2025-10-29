@@ -1,8 +1,21 @@
 class Account:
+    def __init__(self):
+        self.balance = 0
+    
+    def incoming_transfer(self, amount):
+        self.balance += amount
+
+    def outgoing_transfer(self, amount):
+        if self.balance >= amount:
+            self.balance -= amount
+        else:
+            return False
+
+class PersonalAccount(Account):
     def __init__(self, first_name, last_name, pesel, promo_code = None):
+        super().__init__()
         self.first_name = first_name
         self.last_name = last_name
-        self.balance = 0
         #self.pesel = pesel if self.is_pesel_valid(pesel) else "Invalid"
         if self.is_pesel_valid(pesel):
             self.pesel = pesel
@@ -22,12 +35,19 @@ class Account:
             self.promo_code = promo_code
         else:
             self.promo_code = "Invalid"
-    
-    def incoming_transfer(self, amount):
-        self.balance += amount
 
-    def outgoing_transfer(self, amount):
-        if self.balance >= amount:
-            self.balance -= amount
+
+
+class CompanyAccount(Account):
+    def __init__(self, name, nip, balance=0):
+        super().__init__()
+        self.name = name
+
+        if self.is_nip_valid(nip):
+            self.nip = nip
         else:
-            print("Za mało środków na koncie")
+            self.nip = "Invalid"
+        self.balance = balance
+        
+    def is_nip_valid(self, nip):
+        return len(nip) == 10

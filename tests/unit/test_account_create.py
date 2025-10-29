@@ -46,4 +46,18 @@ class TestTransfers:
         before_balance = account.balance
         account.outgoing_transfer(100)
         assert account.balance == before_balance # balans nie może się zmienić bo za mało pieniędzy na koncie
+
+class TestCompanyAccount:
+    def test_nip_too_long(self):
+        account = CompanyAccount("jakasfirma", "111111111111")
+        assert account.nip == "Invalid"
+    
+    def test_nip_too_short(self):
+        account = CompanyAccount("firma2", "1111")
+        assert account.nip == "Invalid"
+    
+    def test_incoming_transfer(self):
+        account = CompanyAccount("firma3", "1111111111")
+        
+        
         
