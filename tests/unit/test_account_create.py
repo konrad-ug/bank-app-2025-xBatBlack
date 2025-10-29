@@ -25,3 +25,25 @@ class TestAccount:
     def test_bad_promo(self):
         account = Account("Jane", "Smith", "11111111111", "jakis_kodzik")
         assert account.promo_code == "Invalid"
+
+class TestTransfers:
+    def test_incoming_transfer(self):
+        account = Account("Alice", "Brown", "22222222222")
+        before_balance = account.balance
+        account.incoming_transfer(100)
+        assert account.balance == before_balance + 100
+    
+    def test_outgoing_transfer(self):
+        account = Account("Walter", "White", "33525333862")
+        account.balance = 200
+        before_balance = account.balance
+        account.outgoing_transfer(100)
+        assert account.balance == before_balance - 100
+    
+    def test_outgoing_transfer_fail(self):
+        account = Account("Walter", "White", "33525333862")
+        account.balance = 50
+        before_balance = account.balance
+        account.outgoing_transfer(100)
+        assert account.balance == before_balance # balans nie może się zmienić bo za mało pieniędzy na koncie
+        

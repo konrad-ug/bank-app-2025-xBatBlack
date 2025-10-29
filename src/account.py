@@ -22,3 +22,12 @@ class Account:
             self.promo_code = promo_code
         else:
             self.promo_code = "Invalid"
+    
+    def incoming_transfer(self, amount):
+        self.balance += amount
+
+    def outgoing_transfer(self, amount):
+        if self.balance >= amount:
+            self.balance -= amount
+        else:
+            print("Za mało środków na koncie")
