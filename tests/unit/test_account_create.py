@@ -28,7 +28,7 @@ class TestAccount:
         account = PersonalAccount("Jane", "Smith", "11111111111", "jakis_kodzik")
         assert account.promo_code == "Invalid"
 
-class TestTransfers:
+class TestPersonalAccountTransfers:
     def test_incoming_transfer(self):
         account = PersonalAccount("Alice", "Brown", "22222222222")
         before_balance = account.balance
@@ -48,6 +48,28 @@ class TestTransfers:
         before_balance = account.balance
         account.outgoing_transfer(100)
         assert account.balance == before_balance # balans nie może się zmienić bo za mało pieniędzy na koncie
+    
+    def test_express_transfer_valid(self):
+        account = PersonalAccount("Bob", "Marley", "44556677889")
+        account.balance = 300
+        before_balance = account.balance
+        account.express_transfer(100)
+        assert account.balance == before_balance - (100 + account.express_fee)  # 100 + 1 express fee
+    
+    def test_express_transfer_invalid(self):
+        account = PersonalAccount("Bob", "Marley", "44566677889")
+        account.balance = 300
+        before_balance = account.balance
+        result = account.express_transfer(400)  # więcej niż na koncie
+        assert result == False
+        assert account.balance == before_balance  # balans nie może się zmienić
+    
+    def test_express_transfer_exact(self):
+        account = PersonalAccount("Frank", "Jonas", "44599677889")
+        account.balance = 300  # dokładnie tyle, żeby pokryć kwotę + opłatę
+        before_balance = account.balance
+        account.express_transfer(300)
+        assert account.balance == before_balance - (300 + account.express_fee)  # 300 + 1 express fee
 
 class TestCompanyAccount:
     def test_nip_too_long(self):
@@ -75,6 +97,28 @@ class TestCompanyAccount:
         balance1 = account.balance
         account.outgoing_transfer(100)
         assert account.balance == balance1 - 100
+    
+    def test_express_transfer_valid(self):
+        account = CompanyAccount("firmaExpress", "3333333333")
+        account.balance = 500
+        balance1 = account.balance
+        account.express_transfer(100)
+        assert account.balance == balance1 - (100 + account.express_fee)  # 100 + 5 express fee
+    
+    def test_express_transfer_invalid(self):
+        account = CompanyAccount("firmaExpress2", "4444444444")
+        account.balance = 500
+        balance1 = account.balance
+        result = account.express_transfer(600)  # więcej niż na koncie
+        assert result == False
+        assert account.balance == balance1  # balans nie może się zmienić
+    
+    def test_express_transfer_exact(self):
+        account = CompanyAccount("firmaExpress3", "5555555555")
+        account.balance = 500  # dokładnie tyle, żeby pokryć kwotę + opłatę
+        balance1 = account.balance
+        account.express_transfer(500)
+        assert account.balance == balance1 - (500 + account.express_fee)  # 500 + 5 express fee
         
         
         
