@@ -120,5 +120,21 @@ class TestCompanyAccount:
         account.express_transfer(500)
         assert account.balance == balance1 - (500 + account.express_fee)  # 500 + 5 express fee
         
-        
+
+class TestTransferHistory:
+    def test_transfer_history_personal(self):
+        account = PersonalAccount("Test", "User", "12345678901")
+        account.incoming_transfer(200)
+        account.outgoing_transfer(50)
+        account.express_transfer(30)
+        expected_history = [200, -50, -30, -account.express_fee]
+        assert account.historia == expected_history
+
+    def test_transfer_history_company(self):
+        account = CompanyAccount("TestCo", "9876543210")
+        account.incoming_transfer(500)
+        account.outgoing_transfer(150)
+        account.express_transfer(100)
+        expected_history = [500, -150, -100, -account.express_fee]
+        assert account.historia == expected_history
         
