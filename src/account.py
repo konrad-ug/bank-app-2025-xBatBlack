@@ -16,6 +16,8 @@ class Account:
             self.balance -= (amount + self.express_fee)
         else:
             return False
+    def nieprzetestowana_metoda(self):
+        return "Brak testu!"
 
 class PersonalAccount(Account):
     def __init__(self, first_name, last_name, pesel, promo_code = None):
