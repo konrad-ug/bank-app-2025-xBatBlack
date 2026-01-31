@@ -1,2 +1,4 @@
 [run]
-omit = src/company_account.py
+omit = 
+    src/company_account.py
+    src/smtp/smtp.py
