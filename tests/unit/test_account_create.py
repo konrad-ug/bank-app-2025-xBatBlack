@@ -1,140 +1,158 @@
+import pytest
+
 from src.account import Account
 from src.account import CompanyAccount
 from src.account import PersonalAccount
 
 
-class TestAccount:
-    def test_account_creation(self):
-        account = PersonalAccount("John", "Doe", "00000000000", "PROM_XYZ")
-        assert account.first_name == "John"
-        assert account.last_name == "Doe"
-        assert account.balance >= 0
-        assert account.pesel == "00000000000"
-        assert account.promo_code == None or account.promo_code[0:5] == "PROM_"
+@pytest.fixture
+def personal_account():
+    return PersonalAccount("John", "Doe", "12345678901")
 
-    def test_pesel_too_long(self):
-        account = PersonalAccount("Jane", "Smith", "1432553253254355435")
-        assert account.pesel == "Invalid"
+@pytest.fixture
+def company_account():
+    return CompanyAccount("Firma", "1234567890")
+
+class TestAccount:
+    def test_account_creation(self, personal_account):
+        assert personal_account.first_name == "John"
+        assert personal_account.last_name == "Doe"
+        assert personal_account.pesel == "12345678901"
+        assert personal_account.balance == 0
     
-    def test_pesel_too_short(self):
-        account = PersonalAccount("Jane", "Smith", "14325")
-        assert account.pesel == "Invalid"
+    @pytest.mark.parametrize("pesel, expected", [
+        ("12345678901", "12345678901"),  # Poprawny
+        ("123", "Invalid"),              # Za krótki
+        ("1234567890123456", "Invalid")  # Za długi
+    ])
+
+    def test_pesel_validation(self, pesel, expected):
+        acc = PersonalAccount("John", "Doe", pesel)
+        assert acc.pesel == expected
     
-    def test_good_promo(self):
-        account = PersonalAccount("Jane", "Smith", "11111111111", "PROM_XYZ")
-        assert account.promo_code == "PROM_XYZ"
+    @pytest.mark.parametrize("pesel, promo_code, expected_code, expected_balance", [
+        ("99000000000", "PROM_XYZ", "PROM_XYZ", 50),
+        ("61000000000", "PROM_XYZ", "PROM_XYZ", 50),
+        ("40000000000", "PROM_XYZ", "Invalid", 0),     # senior nie kwalifikuje się
+        ("88000000000", "zly_kod", "Invalid", 0)       # zły kod
+    ])
     
-    def test_bad_promo(self):
-        account = PersonalAccount("Jane", "Smith", "11111111111", "jakis_kodzik")
-        assert account.promo_code == "Invalid"
+    def test_promo_codes(self, pesel, promo_code, expected_code, expected_balance):
+        acc = PersonalAccount("John", "Doe", pesel, promo_code)
+        assert acc.promo_code == expected_code
+        assert acc.balance == expected_balance
 
 class TestPersonalAccountTransfers:
-    def test_incoming_transfer(self):
-        account = PersonalAccount("Alice", "Brown", "22222222222")
-        before_balance = account.balance
-        account.incoming_transfer(100)
-        assert account.balance == before_balance + 100
+    def test_incoming_transfer(self, personal_account):
+        personal_account.incoming_transfer(100)
+        assert personal_account.balance == 100
+        assert personal_account.historia == [100]
     
-    def test_outgoing_transfer(self):
-        account = PersonalAccount("Walter", "White", "33525333862")
-        account.balance = 200
-        before_balance = account.balance
-        account.outgoing_transfer(100)
-        assert account.balance == before_balance - 100
+    def test_outgoing_transfer_success(self, personal_account):
+        personal_account.incoming_transfer(200)
+        personal_account.outgoing_transfer(100)
+        assert personal_account.balance == 100
+        assert personal_account.historia == [200, -100]
     
-    def test_outgoing_transfer_fail(self):
-        account = PersonalAccount("Walter", "White", "33525333862")
-        account.balance = 50
-        before_balance = account.balance
-        account.outgoing_transfer(100)
-        assert account.balance == before_balance # balans nie może się zmienić bo za mało pieniędzy na koncie
+    def test_outgoing_transfer_fail(self, personal_account):
+        personal_account.balance = 50
+        personal_account.outgoing_transfer(100)
+        assert personal_account.balance == 50  # balans nie powinien się zmienić
     
-    def test_express_transfer_valid(self):
-        account = PersonalAccount("Bob", "Marley", "44556677889")
-        account.balance = 300
-        before_balance = account.balance
-        account.express_transfer(100)
-        assert account.balance == before_balance - (100 + account.express_fee)  # 100 + 1 express fee
+    def test_express_transfer(self, personal_account):
+        personal_account.incoming_transfer(300)
+        personal_account.express_transfer(100)
+        assert personal_account.balance == 199
+        assert personal_account.historia == [300, -100, -1]
     
-    def test_express_transfer_invalid(self):
-        account = PersonalAccount("Bob", "Marley", "44566677889")
-        account.balance = 300
-        before_balance = account.balance
-        result = account.express_transfer(400)  # więcej niż na koncie
-        assert result == False
-        assert account.balance == before_balance  # balans nie może się zmienić
-    
-    def test_express_transfer_exact(self):
-        account = PersonalAccount("Frank", "Jonas", "44599677889")
-        account.balance = 300  # dokładnie tyle, żeby pokryć kwotę + opłatę
-        before_balance = account.balance
-        account.express_transfer(300)
-        assert account.balance == before_balance - (300 + account.express_fee)  # 300 + 1 express fee
+    def test_express_transfer_exact(self, personal_account):
+        personal_account.balance = 100
+        personal_account.express_transfer(100)
+        assert personal_account.balance == -1
+        assert personal_account.historia == [-100, -1]
+
+    def test_express_transfer_fail(self, personal_account):
+        personal_account.balance = 99
+        personal_account.express_transfer(100)
+        assert personal_account.balance == 99
+        assert len(personal_account.historia) == 0  # historia nie powinna się zmienić
 
 class TestCompanyAccount:
-    def test_nip_too_long(self):
-        account = CompanyAccount("jakasfirma", "111111111111")
-        assert account.nip == "Invalid"
-    
-    def test_nip_too_short(self):
-        account = CompanyAccount("firma2", "1111")
-        assert account.nip == "Invalid"
-    
-    def test_good_account(self):
-        account = CompanyAccount("firma67", "1234567890")
-        assert account.nip == "1234567890"
-        assert account.name == "firma67"
+    @pytest.mark.parametrize("nip, expected", [
+        ("1234567890", "1234567890"),  # Poprawny
+        ("123", "Invalid"),            # Za krótki
+        ("1234567890123", "Invalid")   # Za długi
+    ])
 
-    def test_incoming_transfer(self):
-        account = CompanyAccount("firma3", "1111111111")
-        balance1 = account.balance
-        account.incoming_transfer(500)
-        assert account.balance == balance1 + 500
+    def test_nip(self, nip, expected):
+        acc = CompanyAccount("Firma", nip)
+        assert acc.nip == expected
+
+class TestCompanyAccountTransfers:
+    def test_incoming_transfer(self, company_account):
+        company_account.incoming_transfer(500)
+        assert company_account.balance == 500
+        assert company_account.historia == [500]
     
-    def test_outgoing_transfer(self):
-        account = CompanyAccount("firma61", "2222222222")
-        account.balance = 300
-        balance1 = account.balance
-        account.outgoing_transfer(100)
-        assert account.balance == balance1 - 100
+    def test_outgoing_transfer_success(self, company_account):
+        company_account.incoming_transfer(800)
+        company_account.outgoing_transfer(300)
+        assert company_account.balance == 500
+        assert company_account.historia == [800, -300]
     
-    def test_express_transfer_valid(self):
-        account = CompanyAccount("firmaExpress", "3333333333")
-        account.balance = 500
-        balance1 = account.balance
-        account.express_transfer(100)
-        assert account.balance == balance1 - (100 + account.express_fee)  # 100 + 5 express fee
+    def test_outgoing_transfer_fail(self, company_account):
+        company_account.balance = 200
+        company_account.outgoing_transfer(400)
+        assert company_account.balance == 200  # balans nie powinien się zmienić
     
-    def test_express_transfer_invalid(self):
-        account = CompanyAccount("firmaExpress2", "4444444444")
-        account.balance = 500
-        balance1 = account.balance
-        result = account.express_transfer(600)  # więcej niż na koncie
-        assert result == False
-        assert account.balance == balance1  # balans nie może się zmienić
+    def test_express_transfer(self, company_account):
+        company_account.incoming_transfer(1000)
+        company_account.express_transfer(400)
+        assert company_account.balance == 595
+        assert company_account.historia == [1000, -400, -5]
     
-    def test_express_transfer_exact(self):
-        account = CompanyAccount("firmaExpress3", "5555555555")
-        account.balance = 500  # dokładnie tyle, żeby pokryć kwotę + opłatę
-        balance1 = account.balance
-        account.express_transfer(500)
-        assert account.balance == balance1 - (500 + account.express_fee)  # 500 + 5 express fee
+    def test_express_transfer_fail(self, company_account):
+        company_account.balance = 300
+        company_account.express_transfer(400)
+        assert company_account.balance == 300
+        assert len(company_account.historia) == 0  # historia nie powinna się zmienić
+    
+    def test_express_transfer_fee_overdraft(self, company_account):
+        company_account.balance = 100
+        company_account.express_transfer(100)
+        assert company_account.balance == -5
+        assert company_account.historia == [-100, -5]
         
 
-class TestTransferHistory:
-    def test_transfer_history_personal(self):
-        account = PersonalAccount("Test", "User", "12345678901")
-        account.incoming_transfer(200)
-        account.outgoing_transfer(50)
-        account.express_transfer(30)
-        expected_history = [200, -50, -30, -account.express_fee]
-        assert account.historia == expected_history
+class TestLoan:
+    @pytest.mark.parametrize("history, loan_amount, expected_result", [
+        # Przypadek 1: Ostatnie 3 to wpłaty -> Kredyt tak
+        ([100, 100, 100], 500, True),
+        ([500, -100, 10, 10, 10], 1000, True), 
+        
+        # Przypadek 2: Suma ostatnich 5 > kwota -> Kredyt tak
+        ([100, 100, 100, 100, 200], 500, True), # Suma = 600 > 500
+        ([-100, 200, 200, 200, 200], 600, True), # Suma ost. 5 = 700 > 600
+        
+        # Przypadki negatywne
+        ([100, 100], 500, False),               # Za krótka historia
+        ([100, -100, 100, -100, 100], 500, False), # Suma 300 < 500
+    ])
 
-    def test_transfer_history_company(self):
-        account = CompanyAccount("TestCo", "9876543210")
-        account.incoming_transfer(500)
-        account.outgoing_transfer(150)
-        account.express_transfer(100)
-        expected_history = [500, -150, -100, -account.express_fee]
-        assert account.historia == expected_history
+    def test_loan(self, personal_account, history, loan_amount, expected_result):
+        for amount in history:
+            if amount > 0:
+                personal_account.incoming_transfer(amount)
+            else:
+                personal_account.historia.append(amount)
+                personal_account.balance += amount
+        
+        initial_balance = personal_account.balance
+        result = personal_account.submit_for_loan(loan_amount)
+        
+        assert result == expected_result
+        if result:
+            assert personal_account.balance == initial_balance + loan_amount
+        else:
+            assert personal_account.balance == initial_balance
         

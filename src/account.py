@@ -47,6 +47,22 @@ class PersonalAccount(Account):
             self.promo_code = promo_code
         else:
             self.promo_code = "Invalid"
+    
+    def submit_for_loan(self, amount):
+        if self._check_last_3_transactions_positive() or self._check_sum_last_5_transactions(amount):
+            self.balance += amount
+            return True
+        return False
+    
+    def _check_last_3_transactions_positive(self):
+        if len(self.historia) < 3:
+            return False
+        return all(t > 0 for t in self.historia[-3:])
+
+    def _check_sum_last_5_transactions(self, loan_amount):
+        if len(self.historia) < 5:
+            return False
+        return sum(self.historia[-5:]) > loan_amount
 
 
 
