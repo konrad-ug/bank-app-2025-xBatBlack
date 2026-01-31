@@ -3,6 +3,7 @@ import pytest
 from src.account import Account
 from src.account import CompanyAccount
 from src.account import PersonalAccount
+from src.account import AccountRegistry
 
 
 @pytest.fixture
@@ -12,6 +13,10 @@ def personal_account():
 @pytest.fixture
 def company_account():
     return CompanyAccount("Firma", "1234567890")
+
+@pytest.fixture
+def registry():
+    return AccountRegistry()
 
 class TestAccount:
     def test_account_creation(self, personal_account):
@@ -155,4 +160,52 @@ class TestLoan:
             assert personal_account.balance == initial_balance + loan_amount
         else:
             assert personal_account.balance == initial_balance
+
+
+class TestCompanyAccountLoan:
+    
+    @pytest.mark.parametrize("balance, history, loan_amount, expected_result", [
+        #Sukces (Saldo >= 2*kwota ORAZ jest przelew do ZUS -1775)
+        (2000, [-1775, -100], 1000, True), 
+        (5000, [-500, -1775], 2000, True),
+
+        #Porażka - brak przelewu do ZUS (-1775)
+        (5000, [-100, -200], 1000, False),
+
+        #Porażka - saldo za małe (wymagane 2x kwota kredytu)
+        (1900, [-1775], 1000, False), # 1900 < 2000
+
+        #Porażka - brak ZUS i saldo za małe
+        (100, [-50], 1000, False)
+    ])
+
+    def test_take_loan(self, company_account, balance, history, loan_amount, expected_result):
+        company_account.balance = balance
+        company_account.historia = history.copy()
+        result = company_account.take_loan(loan_amount)
+        assert result == expected_result
+        if expected_result:
+            assert company_account.balance == balance + loan_amount
+        else:
+            assert company_account.balance == balance
+
+
+class TestAccountRegistry:
+    def test_add_account(self, registry, personal_account):
+        registry.add_account(personal_account)
+        assert registry.get_count() == 1
         
+    def test_get_account_by_pesel(self, registry, personal_account):
+        registry.add_account(personal_account)
+        found = registry.get_account_by_pesel("12345678901")
+        assert found == personal_account
+        
+    def test_get_account_by_pesel_not_found(self, registry):
+        found = registry.get_account_by_pesel("00000000000")
+        assert found is None
+
+    def test_get_all_accounts(self, registry, personal_account):
+        registry.add_account(personal_account)
+        accounts = registry.get_all_accounts()
+        assert len(accounts) == 1
+        assert accounts[0] == personal_account

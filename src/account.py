@@ -81,3 +81,32 @@ class CompanyAccount(Account):
         
     def is_nip_valid(self, nip):
         return len(nip) == 10
+    
+    def take_loan(self, amount):
+        if self.balance >= amount * 2 and self._check_zus_transfer():
+            self.balance += amount
+            return True
+        return False
+    
+    def _check_zus_transfer(self):
+        return -1775 in self.historia
+    
+
+class AccountRegistry:
+    def __init__(self):
+        self.accounts = []
+
+    def add_account(self, account):
+        self.accounts.append(account)
+
+    def get_count(self):
+        return len(self.accounts)
+
+    def get_account_by_pesel(self, pesel):
+        for account in self.accounts:
+            if hasattr(account, 'pesel') and account.pesel == pesel:
+                return account
+        return None
+        
+    def get_all_accounts(self):
+        return self.accounts
