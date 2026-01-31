@@ -1,9 +1,17 @@
 from flask import Flask, request, jsonify
 from src.account_registry import AccountRegistry
 from src.personal_account import PersonalAccount
+from src.company_account import CompanyAccount
+from src.mongo_accounts_repository import MongoAccountsRepository
 
 app = Flask(__name__)
 registry = AccountRegistry()
+
+try:
+    repo = MongoAccountsRepository()
+except:
+    repo = None
+    print("Warning: Could not connect to MongoDB")
 
 @app.route("/api/accounts", methods=['POST'])
 def create_account():
@@ -103,6 +111,31 @@ def make_transfer(pesel):
     else:
         return jsonify({"message": "Unknown transfer type"}), 400
 
+#feature 20
+@app.route("/api/accounts/save", methods=['POST'])
+def save_accounts():
+    if not repo:
+         return jsonify({"message": "Database not connected"}), 500
+    try:
+        repo.save_all(registry.get_all_accounts())
+        return jsonify({"message": "Accounts saved"}), 200
+    except Exception as e:
+        return jsonify({"message": f"Error saving accounts: {str(e)}"}), 500
+
+@app.route("/api/accounts/load", methods=['POST'])
+def load_accounts():
+    if not repo:
+         return jsonify({"message": "Database not connected"}), 500
+    try:
+        #czyszcimy rejestr
+        registry.accounts = []
+        loaded_accounts = repo.load_all()
+        for acc in loaded_accounts:
+            registry.add_account(acc)
+            
+        return jsonify({"message": "Accounts loaded", "count": len(loaded_accounts)}), 200
+    except Exception as e:
+        return jsonify({"message": f"Error loading accounts: {str(e)}"}), 500
 
 if __name__ == '__main__':
     app.run(debug=True)
