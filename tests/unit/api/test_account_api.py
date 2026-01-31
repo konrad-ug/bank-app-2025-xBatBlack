@@ -92,6 +92,7 @@ def account_with_funds(client): #fixture z kontem z 1000 zł
     pesel = "99999999999"
     client.post("/api/accounts", json={"name": "Rich", "surname": "Guy", "pesel": pesel})
     client.post(f"/api/accounts/{pesel}/transfer", json={"amount": 1000, "type": "incoming"})
+
     return pesel
 
 def test_transfer_incoming(client):

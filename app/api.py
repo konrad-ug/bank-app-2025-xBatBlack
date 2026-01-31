@@ -74,7 +74,7 @@ def delete_account(pesel):
 
 @app.route("/api/accounts/<pesel>/transfer", methods=['POST'])
 def make_transfer(pesel):
-    account = registry.get_account_by_pesel(pesel) #czy konto istnieje
+    account = registry.get_account_by_pesel(pesel)
     if not account:
         return jsonify({"message": "Account not found"}), 404
 
@@ -84,7 +84,6 @@ def make_transfer(pesel):
 
     amount = data["amount"]
     transfer_type = data["type"]
-
     if transfer_type == "incoming":
         account.incoming_transfer(amount)
         return jsonify({"message": "Zlecenie przyjęto do realizacji"}), 200
@@ -93,7 +92,7 @@ def make_transfer(pesel):
         if account.outgoing_transfer(amount):
              return jsonify({"message": "Zlecenie przyjęto do realizacji"}), 200
         else:
-             return jsonify({"message": "Insufficient funds"}), 422 # [cite: 380]
+             return jsonify({"message": "Insufficient funds"}), 422
 
     elif transfer_type == "express":
         if account.express_transfer(amount):
