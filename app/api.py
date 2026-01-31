@@ -12,8 +12,11 @@ def create_account():
          return jsonify({"message": "Bad request"}), 400
 
     account = PersonalAccount(data["name"], data["surname"], data["pesel"])
-    registry.add_account(account)
-    return jsonify({"message": "Account created"}), 201
+    
+    if registry.add_account(account): #sprawdzamy czy duplikat
+        return jsonify({"message": "Account created"}), 201
+    else:
+        return jsonify({"message": "Account with this pesel already exists"}), 409
 
 @app.route("/api/accounts", methods=['GET'])
 def get_all_accounts():
@@ -67,6 +70,40 @@ def delete_account(pesel):
         return jsonify({"message": "Account deleted"}), 200
     else:
         return jsonify({"message": "Account not found"}), 404
+    
+
+@app.route("/api/accounts/<pesel>/transfer", methods=['POST'])
+def make_transfer(pesel):
+    account = registry.get_account_by_pesel(pesel) #czy konto istnieje
+    if not account:
+        return jsonify({"message": "Account not found"}), 404
+
+    data = request.get_json()
+    if "amount" not in data or "type" not in data:
+        return jsonify({"message": "Bad request"}), 400
+
+    amount = data["amount"]
+    transfer_type = data["type"]
+
+    if transfer_type == "incoming":
+        account.incoming_transfer(amount)
+        return jsonify({"message": "Zlecenie przyjęto do realizacji"}), 200
+
+    elif transfer_type == "outgoing":
+        if account.outgoing_transfer(amount):
+             return jsonify({"message": "Zlecenie przyjęto do realizacji"}), 200
+        else:
+             return jsonify({"message": "Insufficient funds"}), 422 # [cite: 380]
+
+    elif transfer_type == "express":
+        if account.express_transfer(amount):
+             return jsonify({"message": "Zlecenie przyjęto do realizacji"}), 200
+        else:
+             return jsonify({"message": "Insufficient funds"}), 422
+
+    else:
+        return jsonify({"message": "Unknown transfer type"}), 400
+
 
 if __name__ == '__main__':
     app.run(debug=True)
