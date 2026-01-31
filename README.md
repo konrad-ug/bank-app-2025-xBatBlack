@@ -9,6 +9,10 @@ surname: Downarowicz
 group: 4
 
 ## How to start the app
-
+1. python and docker installed
+2. pip install -r requirements.txt
+3. docker compose -f mongo.yml up -d
+4. python -m flask -app src/app/api.py --debug run
 
 ## How to execute tests
+1. python -m pytest
