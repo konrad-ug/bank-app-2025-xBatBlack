@@ -1,3 +1,5 @@
+from datetime import date
+from src.smtp.smtp import SMTPClient
 from src.account import Account
 
 class PersonalAccount(Account):
@@ -41,3 +43,10 @@ class PersonalAccount(Account):
         if len(self.historia) < 5:
             return False
         return sum(self.historia[-5:]) > loan_amount
+    
+    def send_history_via_email(self, email_address):
+        subject = f"Account Transfer History {date.today().strftime('%Y-%m-%d')}"
+        text = f"Personal account history: {self.historia}"
+        
+        smtp = SMTPClient()
+        return smtp.send(subject, text, email_address)

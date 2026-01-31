@@ -2,6 +2,7 @@ import os
 import requests
 from datetime import date
 from src.account import Account
+from src.smtp.smtp import SMTPClient
 
 class CompanyAccount(Account):
     def __init__(self, name, nip, balance=0):
@@ -51,3 +52,10 @@ class CompanyAccount(Account):
     
     def _check_zus_transfer(self):
         return -1775 in self.historia
+    
+    def send_history_via_email(self, email_address):
+        subject = f"Account Transfer History {date.today().strftime('%Y-%m-%d')}"
+        text = f"Company account history: {self.historia}"
+        
+        smtp = SMTPClient()
+        return smtp.send(subject, text, email_address)
