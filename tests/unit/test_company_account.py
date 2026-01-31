@@ -1,15 +1,67 @@
 import pytest
+from unittest.mock import patch, Mock
 from src.company_account import CompanyAccount
 
-class TestCompanyAccount:
-    @pytest.mark.parametrize("nip, expected", [
-        ("1234567890", "1234567890"),
-        ("123", "Invalid"),
-        ("1234567890123", "Invalid")
-    ])
-    def test_nip(self, nip, expected):
+@pytest.fixture
+def company_account():
+    with patch('src.company_account.requests.get') as mock_get:
+        mock_response = Mock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {
+            "result": {"subject": {"statusVat": "Czynny"}}
+        }
+        mock_get.return_value = mock_response
+        
+        return CompanyAccount("Firma", "1234567890")
+
+
+class TestCompanyAccountCreation:
+    @patch('src.company_account.requests.get')
+    def test_create_verified_company(self, mock_get):
+        # Arrange
+        mock_response = Mock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {
+            "result": {
+                "subject": {"statusVat": "Czynny", "name": "Firma Testowa"}
+            }
+        }
+        mock_get.return_value = mock_response
+        acc = CompanyAccount("Firma", "1234567890")
+        assert acc.nip == "1234567890"
+        assert mock_get.called
+
+    #Poprawny NIP, ale firma nie istnieje lub nie jest "Czynna"
+    @patch('src.company_account.requests.get')
+    def test_create_unverified_company_raises_error(self, mock_get):
+        mock_response = Mock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {
+            "result": {
+                "subject": {"statusVat": "Zwolniony"}
+            }
+        }
+        mock_get.return_value = mock_response
+        with pytest.raises(ValueError, match="Company not registered!!"):
+            CompanyAccount("Firma", "1234567890")
+
+    #Błąd API
+    @patch('src.company_account.requests.get')
+    def test_create_company_api_error(self, mock_get):
+        mock_response = Mock()
+        mock_response.status_code = 404
+        mock_get.return_value = mock_response
+
+        with pytest.raises(ValueError, match="Company not registered!!"):
+            CompanyAccount("Firma", "1234567890")
+
+    #Niepoprawna długość NIP
+    @patch('src.company_account.requests.get')
+    @pytest.mark.parametrize("nip", ["123", "1234567890123"])
+    def test_invalid_nip_length(self, mock_get, nip):
         acc = CompanyAccount("Firma", nip)
-        assert acc.nip == expected
+        assert acc.nip == "Invalid"
+        assert not mock_get.called
 
 class TestCompanyAccountTransfers:
     def test_incoming_transfer(self, company_account):
