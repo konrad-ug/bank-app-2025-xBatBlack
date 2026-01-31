@@ -50,3 +50,14 @@ class PersonalAccount(Account):
         
         smtp = SMTPClient()
         return smtp.send(subject, text, email_address)
+    
+    def to_dict(self):
+        data = super().to_dict()
+        data.update({
+            "type" : "personal",
+            "first_name": self.first_name,
+            "last_name": self.last_name,
+            "pesel": self.pesel,
+            "promo_code": 'promo_code'
+        })
+        return data

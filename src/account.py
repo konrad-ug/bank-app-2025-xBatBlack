@@ -24,3 +24,9 @@ class Account:
             return True
         else:
             return False
+    
+    def to_dict(self):
+        return {
+            "balance": self.balance,
+            "history": self.historia
+        }

@@ -59,3 +59,12 @@ class CompanyAccount(Account):
         
         smtp = SMTPClient()
         return smtp.send(subject, text, email_address)
+
+    def to_dict(self):
+        data = super().to_dict()
+        data.update({
+            "type" : "company",
+            "name": self.name,
+            "nip": self.nip
+        })
+        return data
